@@ -1,0 +1,94 @@
+---
+- name: Althea Systems - Hardening CIS + Agents Azure
+  hosts: all
+  become: true
+  vars:
+    law_workspace_id: "{{ lookup('env', 'LAW_WORKSPACE_ID') }}"
+    law_workspace_key: "{{ lookup('env', 'LAW_WORKSPACE_KEY') }}"
+
+  tasks:
+
+    - name: "[1/12] Mise a jour paquets systeme"
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: "[2/12] Desactivation SSH root (CIS 5.2.8)"
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin no'
+      notify: Restart SSH
+
+    - name: "[3/12] Desactivation password SSH (CIS 5.2.11)"
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication'
+        line: 'PasswordAuthentication no'
+      notify: Restart SSH
+
+    - name: "[4/12] Timeout SSH 300s (CIS 5.2.13)"
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?ClientAliveInterval'
+        line: 'ClientAliveInterval 300'
+      notify: Restart SSH
+
+    - name: "[5/12] Installation UFW"
+      apt:
+        name: ufw
+        state: present
+
+    - name: "[6/12] Politique par defaut deny all"
+      ufw:
+        default: deny
+        direction: incoming
+
+    - name: "[7/12] Autorisation SSH port 22"
+      ufw:
+        rule: allow
+        port: '22'
+        proto: tcp
+
+    - name: "[8/12] Autorisation HTTPS port 443"
+      ufw:
+        rule: allow
+        port: '443'
+        proto: tcp
+
+    - name: "[9/12] Activation UFW"
+      ufw:
+        state: enabled
+
+    - name: "[10/12] Installation Azure Monitor Agent"
+      shell: |
+        wget -q https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb -O /tmp/packages-microsoft-prod.deb
+        dpkg -i /tmp/packages-microsoft-prod.deb
+        apt-get update -q
+        apt-get install -y azuremonitoragent
+      args:
+        creates: /usr/bin/azuremonitoragent
+      failed_when: false
+
+    - name: "[11/12] Installation Microsoft Defender for Endpoint"
+      apt:
+        name: mdatp
+        state: present
+      failed_when: false
+
+    - name: "[12/12] Sysctl kernel hardening (CIS 3.1)"
+      sysctl:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        state: present
+      loop:
+        - { key: 'net.ipv4.ip_forward', value: '0' }
+        - { key: 'net.ipv4.conf.all.accept_redirects', value: '0' }
+        - { key: 'net.ipv4.conf.all.log_martians', value: '1' }
+        - { key: 'kernel.randomize_va_space', value: '2' }
+
+  handlers:
+    - name: Restart SSH
+      systemd:
+        name: sshd
+        state: restarted
