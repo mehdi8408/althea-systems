@@ -272,5 +272,3 @@ stages:
               echo "Delai : moins de 2 minutes"
             displayName: 'Rollback automatique'
             condition: always()
-
-            init: azure-pipelines.yml
