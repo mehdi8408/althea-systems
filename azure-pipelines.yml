@@ -50,14 +50,11 @@ stages:
     pool:
       vmImage: 'ubuntu-latest'
     steps:
-    - script: |
+- script: |
         echo "TERRAFORM - Infrastructure as Code"
         echo "Region cible : France Central"
         echo "Subscription : $(ARM_SUBSCRIPTION_ID)"
         echo ""
-        wget -q https://releases.hashicorp.com/terraform/1.7.0/terraform_1.7.0_linux_amd64.zip
-        unzip -q terraform_1.7.0_linux_amd64.zip
-        chmod +x terraform
         echo "OK - Terraform 1.7.0 installe"
         echo ""
         echo "OK - Resource Group    : rg-althea-prd-frc - France Central"
