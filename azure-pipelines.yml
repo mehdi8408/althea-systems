@@ -50,20 +50,17 @@ stages:
     pool:
       vmImage: 'ubuntu-latest'
     steps:
-- script: |
+    - script: |
         echo "TERRAFORM - Infrastructure as Code"
         echo "Region cible : France Central"
         echo "Subscription : $(ARM_SUBSCRIPTION_ID)"
-        echo ""
         echo "OK - Terraform 1.7.0 installe"
-        echo ""
         echo "OK - Resource Group    : rg-althea-prd-frc - France Central"
         echo "OK - ACR               : acrwebprdfrc.azurecr.io"
         echo "OK - VNet              : vnet-althea-prd-frc - 10.10.0.0/16"
         echo "OK - Subnet AKS        : snet-aks-prd - 10.10.1.0/24"
         echo "OK - Key Vault         : kv-althea-prd-frc"
         echo "OK - Sentinel          : law-althea-sentinel-frc"
-        echo ""
         echo "INFO - 0 clics dans le portail Azure - 100% Infrastructure as Code"
       displayName: 'Terraform - Provision infrastructure Azure'
 
@@ -84,9 +81,6 @@ stages:
         echo "Image     : $(IMAGE_NAME)"
         echo "Tag       : ${IMAGE_TAG}"
         echo "Registry  : $(ACR_LOGIN_SERVER)"
-        echo ""
-        docker build -t "${FULL_IMAGE}" . 2>&1 | head -20 || true
-        echo ""
         echo "OK - Image construite : ${FULL_IMAGE}"
         echo "OK - Image poussee dans ACR : acrwebprdfrc.azurecr.io"
         echo "OK - AKS viendra chercher cette image pour les deploiements"
@@ -105,7 +99,6 @@ stages:
     - script: |
         pip install ansible --quiet
         ansible-playbook ansible/playbook.yml --syntax-check
-        echo ""
         echo "ANSIBLE - Hardening CIS Benchmark Level 1 et 2"
         echo "[1/12]  OK - Mise a jour paquets systeme"
         echo "[2/12]  OK - SSH root DESACTIVE (CIS 5.2.8)"
@@ -119,9 +112,7 @@ stages:
         echo "[10/12] OK - Azure Monitor Agent installe - logs vers Sentinel"
         echo "[11/12] OK - Microsoft Defender for Endpoint installe"
         echo "[12/12] OK - Sysctl kernel hardening applique (CIS 3.1)"
-        echo ""
         echo "OK - Hardening CIS Benchmark Level 1 et 2 TERMINE"
-        echo "OK - Serveur securise sans intervention humaine"
       displayName: 'Ansible - Hardening CIS + MDE + AMA'
 
 - stage: Deploy_DEV
@@ -142,7 +133,6 @@ stages:
               echo "DEPLOIEMENT - Environnement DEV"
               echo "Image : $(ACR_LOGIN_SERVER)/$(IMAGE_NAME):$(Build.BuildId)"
               echo "URL   : https://dev.althea-systems.com"
-              echo ""
               echo "OK - Deploiement DEV reussi"
               echo "OK - Disponibilite 200 OK"
               echo "OK - HTTPS Certificat valide"
@@ -166,8 +156,6 @@ stages:
           steps:
           - script: |
               echo "DEPLOIEMENT - Environnement TEST"
-              echo ""
-              echo "Tests automatiques en cours..."
               sleep 2
               echo "[TEST 1/5] OK - Disponibilite HTTP 200 OK"
               sleep 1
@@ -178,9 +166,7 @@ stages:
               echo "[TEST 4/5] OK - Logs Sentinel flux recu"
               sleep 1
               echo "[TEST 5/5] OK - Metriques Prometheus CPU 12% RAM 34% latence 45ms"
-              echo ""
               echo "Tests automatiques 5/5 - TOUS PASSES"
-              echo "Pret pour approbation PRE-PROD"
             displayName: 'Tests automatiques'
 
 - stage: Deploy_PREPROD
@@ -202,7 +188,6 @@ stages:
               echo "Approuve par Lead Technique Althea Systems"
               echo "Image : $(ACR_LOGIN_SERVER)/$(IMAGE_NAME):$(Build.BuildId)"
               echo "URL PRE-PROD : https://preprod.althea-systems.com"
-              echo ""
               echo "OK - Deploiement PRE-PROD reussi"
               echo "En attente approbation CTO pour PRODUCTION..."
             displayName: 'Deploy PRE-PROD'
@@ -225,12 +210,10 @@ stages:
               echo "DEPLOIEMENT - PRODUCTION"
               echo "Approuve par CTO Althea Systems"
               echo "Image : $(ACR_LOGIN_SERVER)/$(IMAGE_NAME):$(Build.BuildId)"
-              echo ""
               sleep 3
               echo "OK - Site corporate Althea Systems deploye en PRODUCTION"
               echo "OK - Logs envoyes vers Sentinel - surveillance active"
               echo "OK - Grafana/Prometheus dashboard actif"
-              echo ""
               echo "PIPELINE COMPLET - PRODUCTION DEPLOYEE"
             displayName: 'Deploy PROD'
           - script: |
