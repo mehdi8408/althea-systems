@@ -223,7 +223,7 @@ stages:
               echo "Delai : moins de 2 minutes"
             displayName: 'Rollback automatique'
             condition: always()
-
+            
 - stage: Deploy_GitHub_Pages
   displayName: 'Stage 9 - Deploy GitHub Pages'
   dependsOn: Deploy_PROD
@@ -236,12 +236,14 @@ stages:
     steps:
     - checkout: self
       persistCredentials: true
+      fetchDepth: 0
     - script: |
         git config user.email "par26-bsr3-prj-004@supdevinci.education"
         git config user.name "Althea Pipeline"
-        git checkout -b main || git checkout main
+        git fetch origin main
+        git checkout main
         git remote add github https://$(GITHUB_TOKEN)@github.com/mehdi8408/althea-systems.git || true
-        git push github HEAD:main --force
+        git push github main --force
         echo "OK - Site deploye sur GitHub Pages"
         echo "URL : https://mehdi8408.github.io/althea-systems/"
       displayName: 'Push GitHub Pages'
