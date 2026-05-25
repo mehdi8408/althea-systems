@@ -85,7 +85,6 @@ stages:
         echo "OK - Image poussee dans ACR : acrwebprdfrc.azurecr.io"
         echo "OK - AKS viendra chercher cette image pour les deploiements"
       displayName: 'Docker - Build et Push image'
-
 - stage: Trivy_Scan
   displayName: 'Stage 4 - Trivy Security Scan'
   dependsOn: Docker_Build_Push
@@ -98,41 +97,43 @@ stages:
     steps:
     - checkout: self
     - script: |
-        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.50.1
+        export TRIVY_VERSION="0.50.1"
+        wget -qO- "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" | tar -xzf - trivy
+        chmod +x trivy
+        sudo mv trivy /usr/local/bin/trivy
         echo "Trivy installe avec succes"
         trivy --version
-      displayName: 'Installation Trivy'
-    - script: |
+
+        echo "================================================"
         echo "TRIVY - Scan filesystem du repo Althea Systems"
+        echo "================================================"
         trivy fs . \
           --severity HIGH,CRITICAL \
           --format table \
           --exit-code 0 \
           --ignore-unfixed
-      displayName: 'Trivy - Scan filesystem repo'
-    - script: |
-        echo "TRIVY - Scan config Dockerfile"
+
+        echo "================================================"
+        echo "TRIVY - Scan configuration Dockerfile"
+        echo "================================================"
         trivy config . \
           --severity HIGH,CRITICAL \
           --format table \
           --exit-code 0
-      displayName: 'Trivy - Scan config Dockerfile'
-    - script: |
+
+        echo "================================================"
         echo "TRIVY - Generation rapport JSON"
+        echo "================================================"
         trivy fs . \
           --severity HIGH,CRITICAL \
           --format json \
           --output trivy-report.json \
           --exit-code 0 \
           --ignore-unfixed
-        echo "Rapport genere : trivy-report.json"
-        trivy fs . \
-          --severity HIGH,CRITICAL \
-          --format table \
-          --ignore-unfixed \
-          --exit-code 0
+
         echo "SCAN TERMINE - Rapport disponible dans les artefacts"
-      displayName: 'Trivy - Rapport final'
+        ls -la trivy-report.json
+      displayName: 'Trivy - Scan complet + rapport'
     - publish: trivy-report.json
       artifact: trivy-security-report
       displayName: 'Publication rapport Trivy'
