@@ -86,9 +86,61 @@ stages:
         echo "OK - AKS viendra chercher cette image pour les deploiements"
       displayName: 'Docker - Build et Push image'
 
-- stage: Ansible_Hardening
-  displayName: 'Stage 4 - Ansible Hardening CIS'
+- stage: Trivy_Scan
+  displayName: 'Stage 4 - Trivy Security Scan'
   dependsOn: Docker_Build_Push
+  condition: succeeded()
+  jobs:
+  - job: TrivyScan
+    displayName: 'Scan vulnerabilites Dockerfile + filesystem'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+    - script: |
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.50.1
+        echo "Trivy installe avec succes"
+        trivy --version
+      displayName: 'Installation Trivy'
+    - script: |
+        echo "TRIVY - Scan filesystem du repo Althea Systems"
+        trivy fs . \
+          --severity HIGH,CRITICAL \
+          --format table \
+          --exit-code 0 \
+          --ignore-unfixed
+      displayName: 'Trivy - Scan filesystem repo'
+    - script: |
+        echo "TRIVY - Scan config Dockerfile"
+        trivy config . \
+          --severity HIGH,CRITICAL \
+          --format table \
+          --exit-code 0
+      displayName: 'Trivy - Scan config Dockerfile'
+    - script: |
+        echo "TRIVY - Generation rapport JSON"
+        trivy fs . \
+          --severity HIGH,CRITICAL \
+          --format json \
+          --output trivy-report.json \
+          --exit-code 0 \
+          --ignore-unfixed
+        echo "Rapport genere : trivy-report.json"
+        trivy fs . \
+          --severity HIGH,CRITICAL \
+          --format table \
+          --ignore-unfixed \
+          --exit-code 0
+        echo "SCAN TERMINE - Rapport disponible dans les artefacts"
+      displayName: 'Trivy - Rapport final'
+    - publish: trivy-report.json
+      artifact: trivy-security-report
+      displayName: 'Publication rapport Trivy'
+      condition: always()
+
+- stage: Ansible_Hardening
+  displayName: 'Stage 5 - Ansible Hardening CIS'
+dependsOn: Trivy_Scan
   condition: succeeded()
   jobs:
   - job: AnsibleHardening
@@ -116,7 +168,7 @@ stages:
       displayName: 'Ansible - Hardening CIS + MDE + AMA'
 
 - stage: Deploy_DEV
-  displayName: 'Stage 5 - Deploiement DEV'
+  displayName: 'Stage 6 - Deploiement DEV'
   dependsOn: Ansible_Hardening
   condition: succeeded()
   jobs:
@@ -141,7 +193,7 @@ stages:
             displayName: 'Deploy DEV'
 
 - stage: Deploy_TEST
-  displayName: 'Stage 6 - Deploiement TEST'
+  displayName: 'Stage 7 - Deploiement TEST'
   dependsOn: Deploy_DEV
   condition: succeeded()
   jobs:
@@ -170,7 +222,7 @@ stages:
             displayName: 'Tests automatiques'
 
 - stage: Deploy_PREPROD
-  displayName: 'Stage 7 - PRE-PROD Approbation Lead Tech'
+  displayName: 'Stage 8 - PRE-PROD Approbation Lead Tech'
   dependsOn: Deploy_TEST
   condition: succeeded()
   jobs:
@@ -193,7 +245,7 @@ stages:
             displayName: 'Deploy PRE-PROD'
 
 - stage: Deploy_PROD
-  displayName: 'Stage 8 - PRODUCTION Approbation CTO'
+  displayName: 'Stage 9 - PRODUCTION Approbation CTO'
   dependsOn: Deploy_PREPROD
   condition: succeeded()
   jobs:
@@ -225,7 +277,7 @@ stages:
             condition: always()
             
 - stage: Deploy_GitHub_Pages
-  displayName: 'Stage 9 - Deploy GitHub Pages'
+  displayName: 'Stage 10 - Deploy GitHub Pages'
   dependsOn: Deploy_PROD
   condition: succeeded()
   jobs:
