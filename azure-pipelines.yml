@@ -140,7 +140,7 @@ stages:
 
 - stage: Ansible_Hardening
   displayName: 'Stage 5 - Ansible Hardening CIS'
-dependsOn: Trivy_Scan
+  dependsOn: Trivy_Scan
   condition: succeeded()
   jobs:
   - job: AnsibleHardening
@@ -275,7 +275,7 @@ dependsOn: Trivy_Scan
               echo "Delai : moins de 2 minutes"
             displayName: 'Rollback automatique'
             condition: always()
-            
+
 - stage: Deploy_GitHub_Pages
   displayName: 'Stage 10 - Deploy GitHub Pages'
   dependsOn: Deploy_PROD
