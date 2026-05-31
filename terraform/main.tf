@@ -60,6 +60,17 @@ resource "azurerm_key_vault" "main" {
   location            = azurerm_resource_group.main.location
   tenant_id           = var.tenant_id
   sku_name            = "standard"
+
+  # Correction AZU-0016 — purge protection activee
+  purge_protection_enabled   = true
+  soft_delete_retention_days = 90
+
+  # Correction AZU-0013 — blocage acces reseau par defaut
+  network_acls {
+    default_action = "Deny"
+    bypass         = ["AzureServices"]
+  }
+
   tags = {
     project    = "Althea Systems"
     managed_by = "Terraform"
@@ -85,4 +96,3 @@ output "acr_login_server" {
 output "resource_group_name" {
   value = azurerm_resource_group.main.name
 }
-
